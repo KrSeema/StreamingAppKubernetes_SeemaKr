@@ -2,7 +2,7 @@ stage('Test AWS Credentials') {
     steps {
         withCredentials([
             [$class: 'AmazonWebServicesCredentialsBinding',
-             credentialsId: 'StreamingApp-CI-CD_seemaKr_EKS']
+             credentialsId: 'StreamingApp-CI-CD_seemaKr_AWS']
         ]) {
             sh '''
                 aws sts get-caller-identity
