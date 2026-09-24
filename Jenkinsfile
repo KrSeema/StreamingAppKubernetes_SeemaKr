@@ -19,7 +19,7 @@ pipeline {
         stage('Login to ECR') {
             steps {
                 withAWS(
-                    credentials: 'StreamingApp-CI-CD_seemaKr',
+                    credentials: 'StreamingApp-CI-CD_seemaKr_AWS',
                     region: 'ap-south-1'
                 ) {
                     sh '''
