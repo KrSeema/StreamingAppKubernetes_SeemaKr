@@ -54,14 +54,18 @@ pipeline {
             }
         }
 
-        stage('Check AWS Identity') {
+        stage('Check AWS Configuration') {
             steps {
                 sh '''
-                    aws sts get-caller-identity
+                    echo "===== AWS ENVIRONMENT VARIABLES ====="
+                    env | grep '^AWS_' | sed 's/=.*/=***HIDDEN***/' || true
+
+                    echo "===== AWS CONFIG ====="
+                    aws configure list
                 '''
             }
         }
-        
+
         stage('Login to ECR') {
             steps {
                 sh '''
