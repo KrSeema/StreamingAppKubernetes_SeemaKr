@@ -54,26 +54,16 @@ pipeline {
             }
         }
 
+        stage('Check AWS Identity') {
+            steps {
+                sh '''
+                    aws sts get-caller-identity
+                '''
+            }
+        }
+        
         stage('Login to ECR') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials-cloud',
-                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
-                ]]) {
-                    sh '''
-                        set -e
-
-                        echo "===== Logging in to Amazon ECR ====="
-
-                        aws ecr get-login-password \
-                            --region ${AWS_REGION} | \
-                        docker login \
-                            --username AWS \
-                            --password-stdin ${ECR_REGISTRY}
-                    '''
-                }
                 sh '''
                     set -e
 
