@@ -16,15 +16,14 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('AWS Credential Test') {
             steps {
-                sh '''
-                    echo "Jenkinsfile syntax is valid"
-                    echo "AWS Region: ${AWS_REGION}"
-                    echo "ECR Registry: ${ECR_REGISTRY}"
-                '''
+                script {
+                    awsIdentity(
+                        credentialsId: 'StreamingApp-CI-CD_seemaKr'
+                    )
+                }
             }
         }
-
     }
 }
