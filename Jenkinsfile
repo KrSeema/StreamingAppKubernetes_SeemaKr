@@ -1,15 +1,18 @@
-stage('Test AWS Credentials') {
+stage('Login to ECR') {
     steps {
-        withCredentials([
-            [$class: 'AmazonWebServicesCredentialsBinding',
-             credentialsId: 'StreamingApp-CI-CD_seemaKr_AWS']
-        ]) {
+        withAWS(
+            credentials: 'StreamingApp-CI-CD_seemaKr',
+            region: 'ap-south-1'
+        ) {
             sh '''
+                set -e
+
+                echo "===== AWS Identity ====="
                 aws sts get-caller-identity
-                aws ecr get-login-password --region ap-south-1 \
-                  | docker login \
-                  --username AWS \
-                  --password-stdin 218014315198.dkr.ecr.ap-south-1.amazonaws.com
+
+                echo "===== Logging in to Amazon ECR ====="
+                aws ecr get-login-password --region ${AWS_REGION} |
+                docker login --username AWS --password-stdin ${ECR_REGISTRY}
             '''
         }
     }
