@@ -19,11 +19,10 @@ pipeline {
         stage('AWS Credential Test') {
             steps {
                 script {
-                    awsIdentity(
-                        credentialsId: 'StreamingApp-CI-CD_seemaKr'
-                    )
+                    awsIdentity()
                 }
             }
         }
+
     }
 }
