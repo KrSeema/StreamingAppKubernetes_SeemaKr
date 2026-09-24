@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.chat.name }}
+  namespace: {{ .Values.namespace }}
+
+spec:
+  replicas: {{ .Values.services.chat.replicas }}
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: {{ .Values.services.chat.name }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.services.chat.name }}
+
+    spec:
+      containers:
+        - name: chat
+
+          image: "{{ .Values.services.chat.image }}:{{ .Values.services.chat.tag }}"
+
+          ports:
+            - containerPort: {{ .Values.services.chat.port }}
+
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CHAT_PORT
+
+            - name: MONGO_URI
+              value: "mongodb://mongo:27017/{{ .Values.config.mongoDb }}"
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: JWT_SECRET
+
+            - name: CLIENT_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CLIENT_URLS
+
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.chat.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.chat.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

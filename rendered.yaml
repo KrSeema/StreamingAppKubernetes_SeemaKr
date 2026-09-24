@@ -1,0 +1,713 @@
+---
+# Source: streamingapp/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: streamingapp
+---
+# Source: streamingapp/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: streamingapp-secret
+  namespace: streamingapp
+type: Opaque
+stringData:
+  JWT_SECRET: "streamingapp-dev-secret-change-me"
+  AWS_ACCESS_KEY_ID: ""
+  AWS_SECRET_ACCESS_KEY: ""
+---
+# Source: streamingapp/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: streamingapp-config
+  namespace: streamingapp
+data:
+  MONGO_HOST: "mongo"
+  MONGO_PORT: "27017"
+  MONGO_DB: "streamingapp"
+
+  AUTH_PORT: "3001"
+  STREAMING_PORT: "3002"
+  ADMIN_PORT: "3003"
+  CHAT_PORT: "3004"
+
+  CLIENT_URLS: "http://localhost:3000"
+
+  AWS_REGION: "ap-south-1"
+  AWS_S3_BUCKET: ""
+  AWS_CDN_URL: ""
+
+  STREAMING_PUBLIC_URL: "http://streaming-svc:3002"
+
+  HOST: "http://localhost:3000"
+  JWT_EXPIRES_IN: "24h"
+---
+# Source: streamingapp/templates/admin-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-svc
+  namespace: streamingapp
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: admin
+
+  ports:
+    - name: http
+      port: 3003
+      targetPort: 3003
+---
+# Source: streamingapp/templates/auth-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-svc
+  namespace: streamingapp
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: auth
+
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3001
+---
+# Source: streamingapp/templates/chat-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-svc
+  namespace: streamingapp
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: chat
+
+  ports:
+    - name: http
+      port: 3004
+      targetPort: 3004
+---
+# Source: streamingapp/templates/frontend-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc
+  namespace: streamingapp
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: frontend
+
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+# Source: streamingapp/templates/mongo-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: streamingapp
+spec:
+  clusterIP: None
+  selector:
+    app: mongo
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+# Source: streamingapp/templates/streaming-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: streaming-svc
+  namespace: streamingapp
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: streaming
+
+  ports:
+    - name: http
+      port: 3002
+      targetPort: 3002
+---
+# Source: streamingapp/templates/admin-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin
+  namespace: streamingapp
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: admin
+
+  template:
+    metadata:
+      labels:
+        app: admin
+
+    spec:
+      containers:
+        - name: admin
+
+          image: "seemakr/streaming-admin:1.0.0"
+
+          ports:
+            - containerPort: 3003
+
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: ADMIN_PORT
+
+            - name: MONGO_URI
+              value: "mongodb://mongo:27017/streamingapp"
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: JWT_SECRET
+
+            - name: CLIENT_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CLIENT_URLS
+
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_REGION
+
+            - name: AWS_S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_S3_BUCKET
+
+            - name: AWS_CDN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_CDN_URL
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: AWS_ACCESS_KEY_ID
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: AWS_SECRET_ACCESS_KEY
+
+          readinessProbe:
+            tcpSocket:
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 3003
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Source: streamingapp/templates/auth-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: streamingapp
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: auth
+
+  template:
+    metadata:
+      labels:
+        app: auth
+
+    spec:
+      containers:
+        - name: auth
+
+          image: "seemakr/streaming-auth:1.0.0"
+
+          ports:
+            - containerPort: 3001
+
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AUTH_PORT
+
+            - name: MONGO_URI
+              value: "mongodb://mongo:27017/streamingapp"
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: JWT_SECRET
+
+            - name: CLIENT_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CLIENT_URLS
+
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_REGION
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: AWS_ACCESS_KEY_ID
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: AWS_SECRET_ACCESS_KEY
+
+            - name: HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: HOST
+
+            - name: JWT_EXPIRES_IN
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: JWT_EXPIRES_IN
+
+          readinessProbe:
+            tcpSocket:
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Source: streamingapp/templates/chat-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat
+  namespace: streamingapp
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: chat
+
+  template:
+    metadata:
+      labels:
+        app: chat
+
+    spec:
+      containers:
+        - name: chat
+
+          image: "seemakr/streaming-chat:1.0.0"
+
+          ports:
+            - containerPort: 3004
+
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CHAT_PORT
+
+            - name: MONGO_URI
+              value: "mongodb://mongo:27017/streamingapp"
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: JWT_SECRET
+
+            - name: CLIENT_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CLIENT_URLS
+
+          readinessProbe:
+            tcpSocket:
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 3004
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Source: streamingapp/templates/frontend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: streamingapp
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+        - name: frontend
+
+          image: "seemakr/streaming-frontend:1.0.0"
+
+          ports:
+            - containerPort: 80
+
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Source: streamingapp/templates/streaming-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streaming
+  namespace: streamingapp
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: streaming
+
+  template:
+    metadata:
+      labels:
+        app: streaming
+
+    spec:
+      containers:
+        - name: streaming
+
+          image: "seemakr/streaming-stream:1.0.0"
+
+          ports:
+            - containerPort: 3002
+
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: STREAMING_PORT
+
+            - name: MONGO_URI
+              value: "mongodb://mongo:27017/streamingapp"
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: JWT_SECRET
+
+            - name: CLIENT_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CLIENT_URLS
+
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_REGION
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: AWS_ACCESS_KEY_ID
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: AWS_SECRET_ACCESS_KEY
+
+            - name: AWS_S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_S3_BUCKET
+
+            - name: AWS_CDN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_CDN_URL
+
+            - name: STREAMING_PUBLIC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: STREAMING_PUBLIC_URL
+
+          readinessProbe:
+            tcpSocket:
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Source: streamingapp/templates/mongo-statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  namespace: streamingapp
+spec:
+  serviceName: mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:6
+          ports:
+            - name: mongodb
+              containerPort: 27017
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+          readinessProbe:
+            tcpSocket:
+              port: 27017
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 27017
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: gp2
+        resources:
+          requests:
+            storage: 5Gi
+---
+# Source: streamingapp/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: streamingapp-ingress
+  namespace: streamingapp
+
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - host: streamingapp.local
+
+      http:
+        paths:
+          - path: /api/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-svc
+                port:
+                  number: 3001
+
+          - path: /api/streaming
+            pathType: Prefix
+            backend:
+              service:
+                name: streaming-svc
+                port:
+                  number: 3002
+
+          - path: /api/admin
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-svc
+                port:
+                  number: 3003
+
+          - path: /api/chat
+            pathType: Prefix
+            backend:
+              service:
+                name: chat-svc
+                port:
+                  number: 3004
+
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-svc
+                port:
+                  number: 80

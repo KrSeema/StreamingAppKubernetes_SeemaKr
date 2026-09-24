@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.frontend.name }}
+  namespace: {{ .Values.namespace }}
+
+spec:
+  replicas: {{ .Values.services.frontend.replicas }}
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: {{ .Values.services.frontend.name }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.services.frontend.name }}
+
+    spec:
+      containers:
+        - name: frontend
+
+          image: "{{ .Values.services.frontend.image }}:{{ .Values.services.frontend.tag }}"
+
+          ports:
+            - containerPort: {{ .Values.services.frontend.port }}
+
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.frontend.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.frontend.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

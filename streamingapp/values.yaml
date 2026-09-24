@@ -1,0 +1,78 @@
+namespace: streamingapp
+
+services:
+
+  auth:
+    name: auth
+    image: seemakr/streaming-auth
+    tag: "1.0.0"
+    replicas: 4
+    port: 3001
+
+  streaming:
+    name: streaming
+    image: seemakr/streaming-stream
+    tag: "1.0.0"
+    replicas: 1
+    port: 3002
+
+  admin:
+    name: admin
+    image: seemakr/streaming-admin
+    tag: "1.0.0"
+    replicas: 1
+    port: 3003
+
+  chat:
+    name: chat
+    image: seemakr/streaming-chat
+    tag: "1.0.0"
+    replicas: 1
+    port: 3004
+
+  frontend:
+    name: frontend
+    image: seemakr/streaming-frontend
+    tag: "1.0.3"
+    replicas: 1
+    port: 80
+
+mongo:
+  image: mongo:6
+  replicas: 1
+  port: 27017
+  storage: 5Gi
+  storageClass: gp2
+
+config:
+  mongoHost: mongo
+  mongoPort: "27017"
+  mongoDb: streamingapp
+
+  clientUrls: "http://streamingapp.local"
+
+  awsRegion: ap-south-1
+
+  awsS3Bucket: "streamingapp-media-218014315198"
+  awsCdnUrl: ""
+
+  #streamingPublicUrl: "http://streaming-svc:3002"
+  streamingPublicUrl: "http://streamingapp.local"
+
+  host: "http://localhost:3000"
+  jwtExpiresIn: "24h"
+
+secret:
+  jwtSecret: "streamingapp-dev-secret-change-me"
+  awsAccessKeyId: ""
+  awsSecretAccessKey: ""
+
+ingress:
+  enabled: true
+  className: alb
+  host: streamingapp.local
+
+serviceAccount:
+  create: true
+  name: streamingapp-s3
+  roleArn: arn:aws:iam::218014315198:role/StreamingAppS3Role

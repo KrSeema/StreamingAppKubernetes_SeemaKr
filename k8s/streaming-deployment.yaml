@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streaming
+  namespace: streamingapp
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: streaming
+
+  template:
+    metadata:
+      labels:
+        app: streaming
+
+    spec:
+      containers:
+        - name: streaming
+          image: seemakr/streaming-stream:1.0.0
+
+          ports:
+            - containerPort: 3002
+
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: STREAMING_PORT
+
+            - name: MONGO_URI
+              value: "mongodb://mongo:27017/streamingapp"
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: JWT_SECRET
+
+            - name: CLIENT_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CLIENT_URLS
+
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_REGION
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: AWS_ACCESS_KEY_ID
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: AWS_SECRET_ACCESS_KEY
+
+          readinessProbe:
+            tcpSocket:
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

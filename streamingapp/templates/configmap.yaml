@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: streamingapp-config
+  namespace: {{ .Values.namespace }}
+data:
+  MONGO_HOST: "{{ .Values.config.mongoHost }}"
+  MONGO_PORT: "{{ .Values.config.mongoPort }}"
+  MONGO_DB: "{{ .Values.config.mongoDb }}"
+
+  AUTH_PORT: "{{ .Values.services.auth.port }}"
+  STREAMING_PORT: "{{ .Values.services.streaming.port }}"
+  ADMIN_PORT: "{{ .Values.services.admin.port }}"
+  CHAT_PORT: "{{ .Values.services.chat.port }}"
+
+  CLIENT_URLS: "{{ .Values.config.clientUrls }}"
+
+  AWS_REGION: "{{ .Values.config.awsRegion }}"
+  AWS_S3_BUCKET: "{{ .Values.config.awsS3Bucket }}"
+  AWS_CDN_URL: "{{ .Values.config.awsCdnUrl }}"
+
+  STREAMING_PUBLIC_URL: "{{ .Values.config.streamingPublicUrl }}"
+
+  HOST: "{{ .Values.config.host }}"
+  JWT_EXPIRES_IN: "{{ .Values.config.jwtExpiresIn }}"
