@@ -74,15 +74,14 @@ config:
   mongoPort: "27017"
   mongoDb: streamingapp
 
-  clientUrls: "http://streamingapp.local"
+  clientUrls: "http://imreading.xyz,https://imreading.xyz"
 
   awsRegion: ap-south-1
 
   awsS3Bucket: "streamingapp-media-218014315198"
   awsCdnUrl: ""
 
-  #streamingPublicUrl: "http://streaming-svc:3002"
-  streamingPublicUrl: "http://streamingapp.local"
+  streamingPublicUrl: "http://imreading.xyz"
 
   host: "http://localhost:3000"
   jwtExpiresIn: "24h"
