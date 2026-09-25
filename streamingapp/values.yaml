@@ -4,38 +4,63 @@ services:
 
   auth:
     name: auth
-    image: seemakr/streaming-auth
-    tag: "1.0.0"
-    replicas: 4
+    image: 218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth
+    tag: "v2"
+    replicas: 1
     port: 3001
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 6
+      targetCPUUtilizationPercentage: 70
 
   streaming:
     name: streaming
-    image: seemakr/streaming-stream
-    tag: "1.0.0"
+    image: 218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-stream
+    tag: "v1"
     replicas: 1
     port: 3002
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 70
 
   admin:
     name: admin
-    image: seemakr/streaming-admin
-    tag: "1.0.0"
+    image: 218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-admin
+    tag: "v1"
     replicas: 1
     port: 3003
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
 
   chat:
     name: chat
-    image: seemakr/streaming-chat
-    tag: "1.0.0"
+    image: 218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-chat
+    tag: "v1"
     replicas: 1
     port: 3004
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
 
   frontend:
     name: frontend
-    image: seemakr/streaming-frontend
-    tag: "1.0.3"
+    image: 218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-frontend
+    tag: "v1"
     replicas: 1
     port: 80
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
 
 mongo:
   image: mongo:6
@@ -70,7 +95,7 @@ secret:
 ingress:
   enabled: true
   className: alb
-  host: streamingapp.local
+  host: imreading.xyz
 
 serviceAccount:
   create: true

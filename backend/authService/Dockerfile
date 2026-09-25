@@ -5,7 +5,7 @@ WORKDIR /app
 COPY authService/package*.json ./
 RUN npm ci --omit=dev
 
-COPY . .
+COPY authService/. ./
 
 ENV NODE_ENV=production
 EXPOSE 3001
