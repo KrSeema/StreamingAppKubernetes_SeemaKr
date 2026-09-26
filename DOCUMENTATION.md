@@ -1168,7 +1168,7 @@ The application was validated through authentication, media upload, video playba
 
 ---
 
-# 27. Recommendation for Production Cluster
+# 27. Recommendations for Production Cluster
 
 For a production Kubernetes cluster, I would separate workloads into dedicated namespaces such as application, monitoring, and platform namespaces, with appropriate RBAC policies and resource quotas to improve isolation and security. I would enable TLS for external traffic using HTTPS with certificates managed through AWS Certificate Manager or cert-manager, and enforce secure communication between services where required. For scaling, I would use HPA with carefully tuned CPU and memory targets and minimum/maximum replica counts based on actual workload patterns, and consider cluster autoscaling so worker nodes can scale with demand. I would also use production-grade observability, network policies, secrets management, backups, and multi-AZ workloads to improve reliability and security.
 

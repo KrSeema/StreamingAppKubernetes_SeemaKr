@@ -1,148 +1,159 @@
-# StreamingApp — Kubernetes Deployment with Helm
+# StreamingApp — Helm Installation and Ingress Access
 
-A production-style MERN/Streaming application deployed on Amazon EKS using Kubernetes and Helm.
+This document explains how to deploy the StreamingApp Helm chart to an Amazon EKS cluster and access the application through an AWS Application Load Balancer (ALB) Ingress.
 
-## Architecture
+---
 
-```text
-                         Internet
-                            |
-                            v
-                +----------------------+
-                |   AWS ALB Ingress    |
-                |  streamingapp.local  |
-                +----------+-----------+
-                           |
-        +------------------+------------------+
-        |                  |                  |
-        v                  v                  v
-   Frontend            Auth/Admin/Chat    Streaming
-   Service              Services          Service
-        |                  |                  |
-        +------------------+------------------+
-                           |
-                           v
-                    MongoDB StatefulSet
-                           |
-                           v
-                      EBS Persistent
-                         Volume
-```
+## 1. Prerequisites
 
-## Services
-
-| Service   | Container Port | Kubernetes Service |
-| --------- | -------------: | ------------------ |
-| Frontend  |             80 | `frontend-svc`     |
-| Auth      |           3001 | `auth`             |
-| Streaming |           3002 | `streaming-svc`    |
-| Admin     |           3003 | `admin-svc`        |
-| Chat      |           3004 | `chat-svc`         |
-| MongoDB   |          27017 | `mongo`            |
-
-## Prerequisites
-
-The following tools are required:
+Before starting, make sure the following tools are installed:
 
 * AWS CLI
 * kubectl
 * Helm
 * eksctl
-* An existing Amazon EKS cluster
-* Docker images available from Docker Hub
 
-Docker Hub repositories:
-
-* `seemakr/streaming-frontend`
-* `seemakr/streaming-auth`
-* `seemakr/streaming-stream`
-* `seemakr/streaming-admin`
-* `seemakr/streaming-chat`
-
-## AWS Configuration
-
-AWS region used for this project:
+Verify:
 
 ```bash
-export AWS_REGION=ap-south-1
+aws --version
+kubectl version --client
+helm version
+eksctl version
 ```
 
-Verify AWS credentials:
+The commands in this document use the AWS Mumbai region:
+
+```text
+ap-south-1
+```
+
+---
+
+# 2. Configure AWS CLI
+
+Configure AWS credentials if required:
+
+```bash
+aws configure
+```
+
+Verify the AWS identity:
 
 ```bash
 aws sts get-caller-identity
 ```
 
-Connect kubectl to the EKS cluster:
+Set the AWS region:
+
+```bash
+export AWS_REGION=ap-south-1
+```
+
+---
+
+# 3. Create or Use an EKS Cluster
+
+If the EKS cluster already exists, skip this section.
+
+Example:
+
+```bash
+eksctl create cluster \
+  --name streaming-app-cluster \
+  --region ap-south-1 \
+  --nodes 2 \
+  --node-type t3.medium
+```
+
+Check the cluster:
+
+```bash
+eksctl get cluster --region ap-south-1
+```
+
+Update the local kubeconfig:
 
 ```bash
 aws eks update-kubeconfig \
-  --region ap-south-1 \
-  --name streaming-app-cluster
+  --name streaming-app-cluster \
+  --region ap-south-1
 ```
 
-Verify the cluster:
+Verify connectivity:
 
 ```bash
 kubectl get nodes
 ```
 
-Expected result:
+Expected:
 
 ```text
-NAME                                             STATUS   ROLES    AGE
-ip-192-168-27-47.ap-south-1.compute.internal    Ready    <none>   ...
-ip-192-168-35-155.ap-south-1.compute.internal   Ready    <none>   ...
-ip-192-168-80-184.ap-south-1.compute.internal   Ready    <none>   ...
+NAME                         STATUS   ROLES    AGE   VERSION
+ip-192-168-xx-xx...          Ready    <none>   ...   ...
 ```
 
-## Project Directory
+---
 
-Clone or copy the project and move into the Helm chart directory:
+# 4. Create the Application Namespace
+
+Create the namespace:
 
 ```bash
-cd /home/seema/StreamingApp
+kubectl create namespace streamingapp
 ```
 
-The Helm chart is located at:
-
-```text
-StreamingApp/
-└── streamingapp/
-    ├── Chart.yaml
-    ├── values.yaml
-    └── templates/
-        ├── namespace.yaml
-        ├── configmap.yaml
-        ├── secret.yaml
-        ├── serviceaccount.yaml
-        ├── mongo-service.yaml
-        ├── mongo-statefulset.yaml
-        ├── frontend-deployment.yaml
-        ├── frontend-service.yaml
-        ├── auth-deployment.yaml
-        ├── auth-service.yaml
-        ├── admin-deployment.yaml
-        ├── admin-service.yaml
-        ├── chat-deployment.yaml
-        ├── chat-service.yaml
-        ├── streaming-deployment.yaml
-        ├── streaming-service.yaml
-        └── ingress.yaml
-```
-
-Move into the chart:
+If it already exists, use:
 
 ```bash
-cd /home/seema/StreamingApp/streamingapp
+kubectl get namespace streamingapp
 ```
 
-## Validate the Helm Chart
+---
 
-Run Helm lint:
+# 5. Install AWS Load Balancer Controller
+
+The StreamingApp uses a Kubernetes Ingress with:
+
+```yaml
+ingressClassName: alb
+```
+
+Therefore, the AWS Load Balancer Controller must be installed in the EKS cluster.
+
+Check whether it is already installed:
 
 ```bash
-helm lint .
+kubectl get deployment \
+  aws-load-balancer-controller \
+  -n kube-system
+```
+
+Check its pods:
+
+```bash
+kubectl get pods -n kube-system \
+  -l app.kubernetes.io/name=aws-load-balancer-controller
+```
+
+The controller should have Running pods.
+
+If the controller is not installed, install it according to the AWS Load Balancer Controller setup for the EKS cluster.
+
+---
+
+# 6. Verify the Helm Chart
+
+From the project root:
+
+```bash
+cd ~/StreamingApp
+```
+
+Check the chart:
+
+```bash
+helm lint ./streamingapp
 ```
 
 Expected:
@@ -151,53 +162,55 @@ Expected:
 1 chart(s) linted, 0 chart(s) failed
 ```
 
-Render the Kubernetes manifests:
+Render the manifests locally before installation:
 
 ```bash
-helm template streamingapp . \
-  --namespace streamingapp
+helm template streamingapp ./streamingapp \
+  -n streamingapp
 ```
 
-## Install the Application
+This allows the generated Kubernetes resources to be inspected without installing them.
 
-Create the namespace and install the Helm release:
+---
+
+# 7. Install the StreamingApp Helm Chart
+
+Install the application:
 
 ```bash
-helm install streamingapp . \
-  --namespace streamingapp \
-  --create-namespace
+helm install streamingapp ./streamingapp \
+  -n streamingapp
 ```
 
-Verify the Helm release:
+If the namespace does not exist, use:
+
+```bash
+helm install streamingapp ./streamingapp \
+  --create-namespace \
+  -n streamingapp
+```
+
+Check the Helm release:
 
 ```bash
 helm list -n streamingapp
 ```
 
-Expected status:
+Expected:
 
 ```text
-STATUS: deployed
+NAME           NAMESPACE      STATUS
+streamingapp   streamingapp   deployed
 ```
 
-## Verify Kubernetes Resources
+---
 
-Check all pods:
+# 8. Check Kubernetes Resources
+
+Check all resources:
 
 ```bash
-kubectl get pods -n streamingapp
-```
-
-All application pods should eventually show:
-
-```text
-Running
-```
-
-Check services:
-
-```bash
-kubectl get svc -n streamingapp
+kubectl get all -n streamingapp
 ```
 
 Check deployments:
@@ -206,29 +219,60 @@ Check deployments:
 kubectl get deployments -n streamingapp
 ```
 
-Check MongoDB StatefulSet:
+Check pods:
+
+```bash
+kubectl get pods -n streamingapp -o wide
+```
+
+All application pods should eventually show:
+
+```text
+STATUS    Running
+READY     1/1
+```
+
+Check services:
+
+```bash
+kubectl get services -n streamingapp
+```
+
+---
+
+# 9. Check MongoDB
+
+The application uses MongoDB deployed inside Kubernetes as a StatefulSet.
+
+Check the StatefulSet:
 
 ```bash
 kubectl get statefulset -n streamingapp
 ```
 
-Check MongoDB PVC:
+Check the MongoDB pod:
+
+```bash
+kubectl get pods -n streamingapp -l app=mongo
+```
+
+Check the PersistentVolumeClaim:
 
 ```bash
 kubectl get pvc -n streamingapp
 ```
 
-The MongoDB PVC should show:
+The MongoDB PVC should be:
 
 ```text
-STATUS   Bound
+STATUS: Bound
 ```
 
-## Ingress
+---
 
-The application uses the AWS Load Balancer Controller and an AWS Application Load Balancer.
+# 10. Check the Ingress
 
-Check the Ingress:
+Check the StreamingApp Ingress:
 
 ```bash
 kubectl get ingress -n streamingapp
@@ -237,11 +281,127 @@ kubectl get ingress -n streamingapp
 Example:
 
 ```text
-NAME                  CLASS   HOST                 ADDRESS
-streamingapp-ingress  alb     streamingapp.local  k8s-streamin-streamin-671c5478c2-1060661347.ap-south-1.elb.amazonaws.com
+NAME                  CLASS   HOSTS         ADDRESS
+streamingapp-ingress  alb     imreading.xyz k8s-streamin-....
 ```
 
-Get the ALB hostname directly:
+For more details:
+
+```bash
+kubectl describe ingress streamingapp-ingress \
+  -n streamingapp
+```
+
+The `ADDRESS` field should contain the AWS Application Load Balancer DNS name.
+
+---
+
+# 11. How the Ingress Works
+
+The request flow is:
+
+```text
+User Browser
+     |
+     v
+imreading.xyz
+     |
+     v
+Cloudflare DNS
+     |
+     v
+AWS Application Load Balancer
+     |
+     v
+Kubernetes Ingress
+     |
+     +-------------------+
+     |        |          |
+     v        v          v
+Frontend   Backend     Chat
+Service    Services    Service
+     |        |          |
+     v        v          v
+   Pods      Pods       Pods
+```
+
+The AWS Load Balancer Controller watches the Kubernetes Ingress resource and creates/manages the AWS Application Load Balancer.
+
+---
+
+# 12. Ingress Host
+
+The application uses:
+
+```text
+imreading.xyz
+```
+
+The Ingress configuration contains:
+
+```yaml
+spec:
+  ingressClassName: alb
+
+  rules:
+    - host: imreading.xyz
+```
+
+Therefore, requests should be made using the configured domain.
+
+---
+
+# 13. Application Routes
+
+The Ingress routes requests to the appropriate Kubernetes Services.
+
+| Path                 | Application            |
+| -------------------- | ---------------------- |
+| `/`                  | Frontend               |
+| `/api/login`         | Authentication service |
+| `/api/register`      | Authentication service |
+| `/api/streaming/...` | Streaming service      |
+| `/api/admin/...`     | Admin service          |
+| `/api/chat/...`      | Chat service           |
+
+The exact routing rules are defined in:
+
+```text
+streamingapp/templates/ingress.yaml
+```
+
+---
+
+# 14. Access the Application
+
+After the Ingress receives an AWS ALB address, verify it:
+
+```bash
+kubectl get ingress streamingapp-ingress \
+  -n streamingapp
+```
+
+Example:
+
+```text
+ADDRESS: k8s-streamin-streamin-671c5478c2-188693131.ap-south-1.elb.amazonaws.com
+```
+
+Open the configured application domain in a browser:
+
+```text
+http://imreading.xyz
+```
+
+The StreamingApp frontend should load.
+
+---
+
+# 15. Verify the ALB Directly
+
+You can also test the ALB using its DNS name.
+
+First retrieve it:
 
 ```bash
 kubectl get ingress streamingapp-ingress \
@@ -249,22 +409,18 @@ kubectl get ingress streamingapp-ingress \
   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 ```
 
-The application is exposed through:
+Example output:
 
 ```text
-http://streamingapp.local
+k8s-streamin-streamin-671c5478c2-188693131.ap-south-1.elb.amazonaws.com
 ```
 
-### Local DNS / Hosts File
-
-Because `streamingapp.local` is used as the Ingress host, add the ALB hostname to your local hosts/DNS configuration if required.
-
-For testing directly against the ALB, use the Host header:
+Because the Ingress uses host-based routing, the `Host` header should be supplied:
 
 ```bash
 curl -I \
-  -H "Host: streamingapp.local" \
-  http://k8s-streamin-streamin-671c5478c2-1060661347.ap-south-1.elb.amazonaws.com/
+  -H "Host: imreading.xyz" \
+  http://<ALB-DNS-NAME>
 ```
 
 Expected:
@@ -273,319 +429,375 @@ Expected:
 HTTP/1.1 200 OK
 ```
 
-## Ingress Routing
+---
 
-The ALB routes requests to the appropriate Kubernetes Service.
+# 16. Verify the Domain
 
-```text
-/                  → frontend-svc:80
-/api               → auth:3001
-/api/streaming     → streaming-svc:3002
-/api/admin         → admin-svc:3003
-/api/chat          → chat-svc:3004
-/socket.io         → chat-svc:3004
-```
-
-The `/socket.io` route is required for Socket.IO live chat.
-
-## Access the Application
-
-Open:
-
-```text
-http://streamingapp.local
-```
-
-The application provides:
-
-* User registration
-* User login
-* Video browsing
-* Video playback
-* Admin dashboard
-* Video and thumbnail upload
-* Live chat
-* MongoDB-backed application data
-
-## Scaling
-
-Application replicas are controlled through Helm values.
-
-For example, scale the Auth service to four replicas:
+Test the application domain:
 
 ```bash
-helm upgrade streamingapp . \
-  --namespace streamingapp \
-  --set services.auth.replicas=4
+curl -I http://imreading.xyz
+```
+
+Expected:
+
+```text
+HTTP/1.1 200 OK
+```
+
+You can also test the authentication API:
+
+```bash
+curl -i -X POST \
+  http://imreading.xyz/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"seema.test@example.com","password":"Test@12345"}'
+```
+
+A successful login should return an HTTP success response and authentication information.
+
+---
+
+# 17. Verify Streaming
+
+The streaming API requires an HTTP Range request.
+
+Example:
+
+```bash
+curl -i \
+  -H "Range: bytes=0-1023" \
+  http://imreading.xyz/api/streaming/stream/<VIDEO_ID> \
+  -o /tmp/video-test
+```
+
+Replace:
+
+```text
+<VIDEO_ID>
+```
+
+with the MongoDB video document ID.
+
+A successful response should contain:
+
+```text
+HTTP/1.1 206 Partial Content
+```
+
+---
+
+# 18. Verify Chat
+
+Open the application in two browser tabs.
+
+1. Login in both tabs.
+2. Open a video.
+3. Open the chat section.
+4. Send a message from the first tab.
+5. Confirm that the message appears in the second tab.
+
+This validates the chat API/WebSocket functionality.
+
+---
+
+# 19. Check Application Logs
+
+Check logs for each service:
+
+```bash
+kubectl logs \
+  deployment/auth \
+  -n streamingapp
+```
+
+```bash
+kubectl logs \
+  deployment/streaming \
+  -n streamingapp
+```
+
+```bash
+kubectl logs \
+  deployment/admin \
+  -n streamingapp
+```
+
+```bash
+kubectl logs \
+  deployment/chat \
+  -n streamingapp
+```
+
+Frontend:
+
+```bash
+kubectl logs \
+  deployment/frontend \
+  -n streamingapp
+```
+
+---
+
+# 20. Check Rollout Status
+
+Verify all deployments:
+
+```bash
+kubectl rollout status deployment/auth -n streamingapp
+kubectl rollout status deployment/streaming -n streamingapp
+kubectl rollout status deployment/admin -n streamingapp
+kubectl rollout status deployment/chat -n streamingapp
+kubectl rollout status deployment/frontend -n streamingapp
+```
+
+All deployments should report successful rollout.
+
+---
+
+# 21. Verify Rolling Update Strategy
+
+The application deployments use:
+
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
 ```
 
 Verify:
 
 ```bash
-kubectl get pods -n streamingapp -l app=auth
-```
-
-The Auth deployment uses a rolling update strategy.
-
-## Rolling Update
-
-The application deployments use:
-
-```text
-strategy: RollingUpdate
-maxUnavailable: 0
-maxSurge: 1
-```
-
-This allows new Pods to become available before old Pods are removed.
-
-Check the deployment:
-
-```bash
-kubectl get deployment frontend -n streamingapp -o wide
-```
-
-## Pod Self-Healing
-
-Kubernetes automatically recreates Pods managed by a Deployment.
-
-Example:
-
-```bash
-kubectl get pods -n streamingapp -l app=frontend
-```
-
-Delete the current frontend Pod:
-
-```bash
-kubectl delete pod <frontend-pod-name> -n streamingapp
-```
-
-Watch Kubernetes create the replacement:
-
-```bash
-kubectl get pods -n streamingapp -l app=frontend -w
-```
-
-The replacement Pod should eventually become:
-
-```text
-1/1   Running
-```
-
-Verify that the application is still accessible:
-
-```bash
-curl -I \
-  -H "Host: streamingapp.local" \
-  http://k8s-streamin-streamin-671c5478c2-1060661347.ap-south-1.elb.amazonaws.com/
+kubectl get deployments -n streamingapp \
+  -o custom-columns='NAME:.metadata.name,STRATEGY:.spec.strategy.type,MAX_UNAVAILABLE:.spec.strategy.rollingUpdate.maxUnavailable,MAX_SURGE:.spec.strategy.rollingUpdate.maxSurge'
 ```
 
 Expected:
 
 ```text
-HTTP/1.1 200 OK
+NAME        STRATEGY        MAX_UNAVAILABLE   MAX_SURGE
+auth        RollingUpdate   0                 1
+admin       RollingUpdate   0                 1
+chat        RollingUpdate   0                 1
+frontend    RollingUpdate   0                 1
+streaming   RollingUpdate   0                 1
 ```
 
-## Health Probes
+---
 
-The application Deployments include Kubernetes readiness and liveness probes.
+# 22. Scale Streaming Service
 
-Check probes on a Deployment:
+Scale the Streaming deployment manually:
 
 ```bash
-kubectl describe deployment frontend -n streamingapp
+kubectl scale deployment/streaming \
+  -n streamingapp \
+  --replicas=4
 ```
 
-Look for:
+Verify:
+
+```bash
+kubectl get deployment streaming \
+  -n streamingapp
+```
+
+Check the pods:
+
+```bash
+kubectl get pods \
+  -n streamingapp \
+  -l app=streaming
+```
+
+The deployment should show four replicas.
+
+The Helm chart also contains an HPA for the streaming service.
+
+Check it:
+
+```bash
+kubectl get hpa -n streamingapp
+```
+
+---
+
+# 23. Upgrade Auth Image to 1.0.1
+
+The Helm chart supports changing the image tag.
+
+Run:
+
+```bash
+helm upgrade streamingapp ./streamingapp \
+  -n streamingapp \
+  --set services.auth.tag=1.0.1
+```
+
+Check the rollout:
+
+```bash
+kubectl rollout status deployment/auth \
+  -n streamingapp
+```
+
+Verify the image:
+
+```bash
+kubectl get deployment auth \
+  -n streamingapp \
+  -o jsonpath='{.spec.template.spec.containers[0].image}'
+```
+
+Expected:
 
 ```text
-Liveness
-Readiness
+218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:1.0.1
 ```
 
-These probes allow Kubernetes to determine whether a container is healthy and ready to receive traffic.
+---
 
-## Smoke Tests
+# 24. Verify Helm Release
 
-### 1. Check Pods
+Check the release:
+
+```bash
+helm status streamingapp \
+  -n streamingapp
+```
+
+Check Helm history:
+
+```bash
+helm history streamingapp \
+  -n streamingapp
+```
+
+---
+
+# 25. Troubleshooting
+
+## Ingress has no ADDRESS
+
+Check:
+
+```bash
+kubectl describe ingress streamingapp-ingress \
+  -n streamingapp
+```
+
+Check the AWS Load Balancer Controller:
+
+```bash
+kubectl get pods \
+  -n kube-system \
+  -l app.kubernetes.io/name=aws-load-balancer-controller
+```
+
+Check controller logs:
+
+```bash
+kubectl logs \
+  -n kube-system \
+  deployment/aws-load-balancer-controller
+```
+
+---
+
+## Pods are not Running
+
+Check:
 
 ```bash
 kubectl get pods -n streamingapp
 ```
 
-All application Pods should be `Running` and `Ready`.
-
-### 2. Register/Login
-
-Open:
-
-```text
-http://streamingapp.local
-```
-
-Register a user and log in.
-
-### 3. Admin Upload
-
-Log in using an admin account.
-
-Open the Admin Dashboard and upload:
-
-* Video
-* Thumbnail
-* Title
-* Description
-* Genre
-* Release year
-
-The uploaded media is stored in Amazon S3 and metadata is stored in MongoDB.
-
-### 4. Video Playback
-
-Open the Browse page.
-
-Select the uploaded video.
-
-Verify that the video plays successfully.
-
-### 5. Live Chat
-
-Open the video player.
-
-Open the Chat panel.
-
-Send a message and verify that it is delivered.
-
-The Socket.IO endpoint is routed through:
-
-```text
-/socket.io → chat-svc:3004
-```
-
-### 6. Self-Healing
-
-Delete a frontend Pod and verify that Kubernetes creates a replacement Pod.
-
-Then verify the application still returns:
-
-```text
-HTTP/1.1 200 OK
-```
-
-## Useful Troubleshooting Commands
-
-Check all resources:
+Then:
 
 ```bash
-kubectl get all -n streamingapp
+kubectl describe pod <POD_NAME> \
+  -n streamingapp
 ```
 
-Check Ingress:
+Check events:
 
 ```bash
-kubectl describe ingress streamingapp-ingress -n streamingapp
+kubectl get events \
+  -n streamingapp \
+  --sort-by=.lastTimestamp
 ```
 
-Check a Deployment:
+---
+
+## ImagePullBackOff
+
+Check the image configured in Helm:
 
 ```bash
-kubectl describe deployment frontend -n streamingapp
+helm get values streamingapp \
+  -n streamingapp
 ```
 
-Check Pod logs:
+Verify that the image exists in Amazon ECR.
+
+---
+
+## MongoDB Pod is Pending
+
+Check:
 
 ```bash
-kubectl logs <pod-name> -n streamingapp
+kubectl describe pod mongo-0 \
+  -n streamingapp
 ```
 
-Check previous container logs:
+Check PVC:
 
 ```bash
-kubectl logs <pod-name> -n streamingapp --previous
+kubectl get pvc -n streamingapp
 ```
 
-Check Helm release history:
+Check PV:
 
 ```bash
-helm history streamingapp -n streamingapp
+kubectl get pv
 ```
 
-Check Helm status:
+---
 
-```bash
-helm status streamingapp -n streamingapp
-```
-
-## Uninstall
+# 26. Uninstall the Application
 
 To remove the Helm release:
 
 ```bash
 helm uninstall streamingapp \
-  --namespace streamingapp
+  -n streamingapp
 ```
 
-Check the namespace:
+Verify:
 
 ```bash
-kubectl get namespace streamingapp
+kubectl get all -n streamingapp
 ```
 
-MongoDB uses persistent storage, so verify PVCs before deleting storage-related resources.
-
-## Final Deployment Summary
-
-```text
-Application:
-StreamingApp
-
-Platform:
-Amazon EKS
-
-Region:
-ap-south-1 (Mumbai)
-
-Namespace:
-streamingapp
-
-Package Manager:
-Helm
-
-Ingress:
-AWS Application Load Balancer
-
-Ingress Host:
-streamingapp.local
-
-Database:
-MongoDB StatefulSet
-
-Persistent Storage:
-Amazon EBS CSI / gp2
-
-Object Storage:
-Amazon S3
-
-Container Registry:
-Docker Hub
-
-Live Chat:
-Socket.IO
-
-Self-Healing:
-Kubernetes Deployment
-
-Scaling:
-Helm-managed replica configuration
-```
-
-## Final Verification
-
-Before submission, run:
+If the namespace is no longer required:
 
 ```bash
-helm status streamingapp -n streamingapp
+kubectl delete namespace streamingapp
+```
+
+> Note: Persistent resources such as storage may require separate cleanup depending on the configured Kubernetes storage and reclaim policy.
+
+---
+
+# 27. Complete Deployment Verification
+
+Run:
+
+```bash
+helm list -n streamingapp
 ```
 
 ```bash
@@ -604,8 +816,135 @@ kubectl get ingress -n streamingapp
 kubectl get pvc -n streamingapp
 ```
 
-```bash
-kubectl get deployments -n streamingapp
+The expected architecture is:
+
+```text
+                         Internet
+                            |
+                            v
+                    imreading.xyz
+                            |
+                            v
+                     Cloudflare DNS
+                            |
+                            v
+              AWS Application Load Balancer
+                            |
+                            v
+                   Kubernetes Ingress
+                            |
+          +-----------------+-----------------+
+          |                 |                 |
+          v                 v                 v
+      Frontend           Backend             Chat
+       Service           Services           Service
+          |                 |                 |
+          v                 v                 v
+      Frontend        Auth / Streaming /    Chat Pods
+        Pods           Admin Pods
+                            |
+                +-----------+-----------+
+                |                       |
+                v                       v
+             MongoDB                  Amazon S3
+             StatefulSet              Media Storage
 ```
 
-The application should be accessible through the Ingress hostname and all required services should be healthy.
+The AWS Load Balancer Controller manages the AWS ALB based on the Kubernetes Ingress resource.
+
+---
+
+## Quick Deployment Commands
+
+For a quick deployment after the EKS cluster and prerequisites are ready:
+
+```bash
+aws eks update-kubeconfig \
+  --name streaming-app-cluster \
+  --region ap-south-1
+```
+
+```bash
+kubectl create namespace streamingapp
+```
+
+```bash
+helm lint ./streamingapp
+```
+
+```bash
+helm install streamingapp ./streamingapp \
+  -n streamingapp
+```
+
+```bash
+kubectl get pods -n streamingapp
+```
+
+```bash
+kubectl get ingress -n streamingapp
+```
+
+Once the ALB is provisioned and DNS is configured, access:
+
+```text
+http://imreading.xyz
+```
+
+---
+
+# 28. Useful Commands
+
+### Helm
+
+```bash
+helm list -n streamingapp
+helm status streamingapp -n streamingapp
+helm history streamingapp -n streamingapp
+helm get values streamingapp -n streamingapp
+```
+
+### Kubernetes
+
+```bash
+kubectl get pods -n streamingapp
+kubectl get deployments -n streamingapp
+kubectl get services -n streamingapp
+kubectl get ingress -n streamingapp
+kubectl get pvc -n streamingapp
+kubectl get hpa -n streamingapp
+```
+
+### Logs
+
+```bash
+kubectl logs deployment/auth -n streamingapp
+kubectl logs deployment/streaming -n streamingapp
+kubectl logs deployment/admin -n streamingapp
+kubectl logs deployment/chat -n streamingapp
+kubectl logs deployment/frontend -n streamingapp
+```
+
+### Rollouts
+
+```bash
+kubectl rollout status deployment/auth -n streamingapp
+kubectl rollout status deployment/streaming -n streamingapp
+kubectl rollout status deployment/admin -n streamingapp
+kubectl rollout status deployment/chat -n streamingapp
+kubectl rollout status deployment/frontend -n streamingapp
+```
+
+---
+
+# Conclusion
+
+The StreamingApp Helm chart provides a repeatable way to deploy the complete multi-service application to Kubernetes.
+
+The AWS Load Balancer Controller integrates the Kubernetes Ingress with an AWS Application Load Balancer, allowing users to access the application through:
+
+```text
+http://imreading.xyz
+```
+
+Helm can then be used to manage application versions, image tags, replica counts, autoscaling configuration, and rolling updates.
