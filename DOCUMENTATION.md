@@ -40,6 +40,13 @@ The application consists of:
                     | AWS Application Load    |
                     | Balancer (ALB)          |
                     +-----------+-------------+
+                                |                                
+                                v
+                    +--------------------------+
+                    | Kubernetes Ingress       |
+                    | streamingapp-ingress     |
+                    | Ingress Class: ALB       |   
+                    +---------------+----------+
                                 |
                                 v
                     +-------------------------+
@@ -86,6 +93,7 @@ The application consists of:
                     | Slack ChatOps         |
                     | #streamingapp-devops  |
                     +-----------------------+
+
 ```
 
 ---
@@ -221,7 +229,7 @@ The pipeline uses:
 
 ```groovy
 withAWS(
-    credentials: 'StreamingApp-CI-CD_seemaKr',
+    credentials: 'Credentials_ID',
     region: 'ap-south-1'
 )
 ```
@@ -372,6 +380,191 @@ helm upgrade streamingapp ./streamingapp \
   -n streamingapp \
   --force-conflicts
 ```
+
+---
+
+## 8. Ingress and External Access
+
+The application is exposed to users through a Kubernetes Ingress resource using the **AWS Load Balancer Controller**. The Ingress creates an AWS Application Load Balancer (ALB) that routes external HTTP traffic to the appropriate Kubernetes services.
+
+### Ingress Configuration
+
+The application uses the following hostname:
+
+```text
+imreading.xyz
+```
+
+Ingress resource:
+
+```text
+streamingapp-ingress
+```
+
+Ingress class:
+
+```text
+alb
+```
+
+The AWS Load Balancer Controller watches the Kubernetes Ingress resource and provisions/configures the AWS Application Load Balancer automatically.
+
+The traffic flow is:
+
+```text
+User Browser
+     |
+     | HTTP
+     v
+imreading.xyz
+     |
+     v
+Cloudflare DNS
+     |
+     v
+AWS Application Load Balancer
+     |
+     | Kubernetes Ingress rules
+     |
+     +--------------------+
+     |                    |
+     v                    v
+Frontend Service       API Services
+     |                    |
+     v                    +--> auth-service
+Frontend Pods             +--> streaming-service
+                          +--> admin-service
+                          +--> chat-service
+```
+
+### Ingress Host-Based Routing
+
+The Ingress uses the host `imreading.xyz` to route requests into the StreamingApp Kubernetes services.
+
+API requests are exposed through the `/api` path and are routed to the corresponding backend services. The frontend application is served for normal web requests.
+
+Examples:
+
+```text
+http://imreading.xyz/
+    -> Frontend Service
+
+http://imreading.xyz/api/login
+    -> Auth Service
+
+http://imreading.xyz/api/streaming/videos
+    -> Streaming Service
+
+http://imreading.xyz/api/admin/videos
+    -> Admin Service
+
+http://imreading.xyz/api/chat/...
+    -> Chat Service
+```
+
+This allows the application to use a single public hostname instead of exposing each backend service separately.
+
+### AWS Load Balancer Controller
+
+The AWS Load Balancer Controller was installed in the `kube-system` namespace.
+
+The controller creates and manages the AWS Application Load Balancer based on the Kubernetes Ingress resource.
+
+Controller installation was performed using Helm:
+
+```bash
+helm upgrade --install aws-load-balancer-controller \
+  eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=streaming-app-cluster \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set region=ap-south-1 \
+  --set vpcId=$(aws eks describe-cluster \
+    --name streaming-app-cluster \
+    --region ap-south-1 \
+    --query 'cluster.resourcesVpcConfig.vpcId' \
+    --output text)
+```
+
+The controller pods were verified as running:
+
+```bash
+kubectl get pods -n kube-system \
+  -l app.kubernetes.io/name=aws-load-balancer-controller
+```
+
+### Ingress Verification
+
+The Ingress can be checked using:
+
+```bash
+kubectl get ingress -n streamingapp
+```
+
+Detailed configuration:
+
+```bash
+kubectl describe ingress streamingapp-ingress -n streamingapp
+```
+
+Expected hostname:
+
+```text
+imreading.xyz
+```
+
+The ALB DNS name provisioned for the application was:
+
+```text
+k8s-streamin-streamin-671c5478c2-188693131.ap-south-1.elb.amazonaws.com
+```
+
+### DNS Configuration
+
+Cloudflare DNS is used to point the public domain to the AWS Application Load Balancer.
+
+```text
+imreading.xyz
+      |
+      | CNAME
+      v
+AWS Application Load Balancer
+```
+
+The DNS record is configured as DNS-only so that the hostname resolves to the AWS ALB.
+
+### Application Verification
+
+The application was verified through the public domain:
+
+```bash
+curl -I http://imreading.xyz
+```
+
+The application returned:
+
+```text
+HTTP/1.1 200 OK
+```
+
+The API endpoints were also tested through the Ingress:
+
+```bash
+curl -i http://imreading.xyz/api/verify
+```
+
+The endpoint returned an authentication response, confirming that the request reached the backend service through the Ingress.
+
+The streaming API was also tested:
+
+```bash
+curl -i http://imreading.xyz/api/streaming/videos
+```
+
+The API returned successfully through the public hostname.
+
+Therefore, the Ingress provides the external entry point for the StreamingApp and connects the public domain to the frontend and backend Kubernetes services.
 
 ---
 
