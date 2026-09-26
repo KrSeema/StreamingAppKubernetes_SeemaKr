@@ -27,72 +27,107 @@ The application consists of:
 # 2. Overall System Architecture
 
 ```text
-                              Internet
-                                  |
-                                  v
-                         +----------------+
-                         |   Cloudflare   |
-                         |  imreading.xyz |
-                         +-------+--------+
-                                 |
-                                 v
-                    +-------------------------+
-                    | AWS Application Load    |
-                    | Balancer (ALB)          |
-                    +-----------+-------------+
-                                |                                
-                                v
-                    +--------------------------+
-                    | Kubernetes Ingress       |
-                    | streamingapp-ingress     |
-                    | Ingress Class: ALB       |   
-                    +---------------+----------+
-                                |
-                                v
-                    +-------------------------+
-                    |        AWS EKS          |
-                    |  streaming-app-cluster  |
-                    |                         |
-                    |  Namespace: streamingapp|
-                    +-----------+-------------+
-                                |
-          +---------------------+----------------------+
-          |            |             |        |        |
-          v            v             v        v        v
-      Frontend       Auth        Streaming   Admin    Chat
-      Deployment   Deployment   Deployment Deployment Deployment
-          |            |             |        |        |
-          v            v             v        v        v
-       Service      Service       Service   Service   Service
-                                       |
-                                       |
-                              +--------+--------+
-                              |                 |
-                              v                 v
-                         MongoDB            Amazon S3
-                         StatefulSet       Media Storage
-                         mongo-0           Videos/Thumbnails
-                              |
-                              v
-                           PVC
-                          5 GiB gp2
+                                                               Internet
+                                     |
+                                     v
+                         +------------------------+
+                         |      Cloudflare         |
+                         |      imreading.xyz      |
+                         +-----------+------------+
+                                     |
+                                     v
+                         +------------------------+
+                         | AWS Application Load   |
+                         | Balancer (ALB)         |
+                         +-----------+------------+
+                                     |
+                                     v
+                         +------------------------+
+                         | Kubernetes Ingress     |
+                         | streamingapp-ingress   |
+                         | Ingress Class: ALB     |
+                         +-----------+------------+
+                                     |
+                                     v
+        +-------------------------------------------------------+
+        |                        AWS EKS                         |
+        |                 streaming-app-cluster                 |
+        |                                                       |
+        |  Namespace: streamingapp                              |
+        |                                                       |
+        |  +-------------------+                                |
+        |  | Kubernetes        |                                |
+        |  | Services          |                                |
+        |  +---------+---------+                                |
+        |            |                                          |
+        |    +-------+-------+-------+-------+-------+          |
+        |    |       |       |       |       |                  |
+        |    v       v       v       v       v                  |
+        | Frontend  Auth  Streaming Admin   Chat                |
+        |    |       |       |       |       |                  |
+        |    v       v       v       v       v                  |
+        | Frontend  Auth  Streaming Admin   Chat                |
+        | Deployment Deployment Deployment Deployment Deployment|
+        |    |       |       |       |       |                  |
+        |    v       v       v       v       v                  |
+        |   Pods    Pods    Pods    Pods    Pods                |
+        |                                                       |
+        |              +----------------------+                 |
+        |              | MongoDB StatefulSet  |                 |
+        |              |       mongo-0         |                 |
+        |              +----------+-----------+                 |
+        |                         |                             |
+        |                         v                             |
+        |                    +---------+                        |
+        |                    | PVC     |                        |
+        |                    | 5 GiB   |                        |
+        |                    | gp2     |                        |
+        |                    +---------+                        |
+        +-------------------------------------------------------+
+                         |
+                         | S3 API
+                         v
+                 +----------------------+
+                 |      Amazon S3       |
+                 |    Media Storage     |
+                 |                      |
+                 | Videos / Thumbnails  |
+                 +----------------------+
 
-                    +-----------------------+
-                    |   CloudWatch          |
-                    | Container Insights    |
-                    | Metrics + Logs         |
-                    +-----------------------+
 
-                    +-----------------------+
-                    | Jenkins               |
-                    | Build → ECR Push      |
-                    +----------+------------+
-                               |
-                               v
-                    +-----------------------+
-                    | Slack ChatOps         |
-                    | #streamingapp-devops  |
-                    +-----------------------+
+       +-----------------------+
+       |       Jenkins         |
+       |                       |
+       | Build Docker Images   |
+       |        |              |
+       |        v              |
+       |     Amazon ECR        |
+       |        |              |
+       |        v              |
+       |   Container Images    |
+       +----------+------------+
+                  |
+                  |
+                  v
+       Kubernetes / Helm Deployment
+
+
+       +-----------------------+
+       |      CloudWatch       |
+       |   Container Insights  |
+       |                       |
+       |    Metrics + Logs     |
+       +-----------------------+
+
+
+       +-----------------------+
+       |    Slack ChatOps      |
+       |  #streamingapp-devops |
+       +-----------------------+
+                  ^
+                  |
+                  |
+              Jenkins
 
 ```
 
