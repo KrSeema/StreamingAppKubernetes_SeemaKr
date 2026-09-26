@@ -152,9 +152,11 @@ pipeline {
                 )
             ]) {
                 sh '''
+                    set -e
+
                     curl -sS -X POST \
-                        -H "Content-Type: application/json" \
-                        --data "{\"text\":\"🚀 StreamingApp CI/CD SUCCESS\\nBuild: #${BUILD_NUMBER}\\nBranch: ${BRANCH_NAME}\\nJob: ${JOB_NAME}\"}" \
+                        -H 'Content-Type: application/json' \
+                        --data '{"text":"🚀 StreamingApp CI/CD SUCCESS"}' \
                         "${SLACK_WEBHOOK_URL}"
                 '''
             }
@@ -170,9 +172,11 @@ pipeline {
                 )
             ]) {
                 sh '''
+                    set -e
+
                     curl -sS -X POST \
-                        -H "Content-Type: application/json" \
-                        --data "{\"text\":\"❌ StreamingApp CI/CD FAILED\\nBuild: #${BUILD_NUMBER}\\nBranch: ${BRANCH_NAME}\\nJob: ${JOB_NAME}\\nCheck Jenkins for the failed stage.\"}" \
+                        -H 'Content-Type: application/json' \
+                        --data '{"text":"❌ StreamingApp CI/CD FAILED - Check Jenkins Console Output"}' \
                         "${SLACK_WEBHOOK_URL}"
                 '''
             }
