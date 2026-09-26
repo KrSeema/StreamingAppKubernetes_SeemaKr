@@ -53,6 +53,7 @@ pipeline {
 
                     echo "===== Docker Images Built ====="
                     docker images | grep -E 'streaming-(auth|stream|admin|chat|frontend)'
+                    exit 1
                 '''
             }
         }
