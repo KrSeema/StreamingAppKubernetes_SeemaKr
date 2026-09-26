@@ -97,7 +97,6 @@ pipeline {
                         docker push \
                             ${ECR_REGISTRY}/streaming-auth:${IMAGE_TAG}
 
-
                         echo "===== Tagging Streaming Image ====="
                         docker tag \
                             streaming-stream:${IMAGE_TAG} \
@@ -106,7 +105,6 @@ pipeline {
                         echo "===== Pushing Streaming Image ====="
                         docker push \
                             ${ECR_REGISTRY}/streaming-stream:${IMAGE_TAG}
-
 
                         echo "===== Tagging Admin Image ====="
                         docker tag \
@@ -117,7 +115,6 @@ pipeline {
                         docker push \
                             ${ECR_REGISTRY}/streaming-admin:${IMAGE_TAG}
 
-
                         echo "===== Tagging Chat Image ====="
                         docker tag \
                             streaming-chat:${IMAGE_TAG} \
@@ -127,7 +124,6 @@ pipeline {
                         docker push \
                             ${ECR_REGISTRY}/streaming-chat:${IMAGE_TAG}
 
-
                         echo "===== Tagging Frontend Image ====="
                         docker tag \
                             streaming-frontend:${IMAGE_TAG} \
@@ -136,7 +132,6 @@ pipeline {
                         echo "===== Pushing Frontend Image ====="
                         docker push \
                             ${ECR_REGISTRY}/streaming-frontend:${IMAGE_TAG}
-
 
                         echo "===== All Images Pushed Successfully ====="
                     '''
@@ -149,10 +144,38 @@ pipeline {
     post {
         success {
             echo 'StreamingApp CI/CD pipeline completed successfully.'
+
+            withCredentials([
+                string(
+                    credentialsId: 'streamingapp-slack-webhook',
+                    variable: 'SLACK_WEBHOOK_URL'
+                )
+            ]) {
+                sh '''
+                    curl -sS -X POST \
+                        -H "Content-Type: application/json" \
+                        --data "{\"text\":\"🚀 StreamingApp CI/CD SUCCESS\\nBuild: #${BUILD_NUMBER}\\nBranch: ${BRANCH_NAME}\\nJob: ${JOB_NAME}\"}" \
+                        "${SLACK_WEBHOOK_URL}"
+                '''
+            }
         }
 
         failure {
             echo 'StreamingApp CI/CD pipeline failed.'
+
+            withCredentials([
+                string(
+                    credentialsId: 'streamingapp-slack-webhook',
+                    variable: 'SLACK_WEBHOOK_URL'
+                )
+            ]) {
+                sh '''
+                    curl -sS -X POST \
+                        -H "Content-Type: application/json" \
+                        --data "{\"text\":\"❌ StreamingApp CI/CD FAILED\\nBuild: #${BUILD_NUMBER}\\nBranch: ${BRANCH_NAME}\\nJob: ${JOB_NAME}\\nCheck Jenkins for the failed stage.\"}" \
+                        "${SLACK_WEBHOOK_URL}"
+                '''
+            }
         }
     }
 }
