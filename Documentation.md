@@ -303,9 +303,9 @@ withAWS(
 
 Check Jenkinsfile:
 
-```bash
-cat **[Jenkinsfile]([Helm Installation and Ingress Guide](https://github.com/KrSeema/StreamingAppKubernetes_SeemaKr/blob/main/Jenkinsfile))**
-```
+
+cat [Jenkinsfile](https://github.com/KrSeema/StreamingAppKubernetes_SeemaKr/blob/main/Jenkinsfile)
+
 
 After modifying Jenkinsfile:
 
