@@ -26,7 +26,7 @@ ap-south-1
 # 2. Clone / Project Setup
 
 ```bash
-git clone https://github.com/KrSeema/StreamingAppKubernetes_SeemaKr.git
+git clone <Repo-link>
 
 cd StreamingAppKubernetes_SeemaKr
 ```
@@ -146,7 +146,7 @@ docker images
 AWS account:
 
 ```text
-218014315198
+aws_accountID
 ```
 
 Region:
@@ -163,7 +163,7 @@ aws ecr get-login-password \
 docker login \
   --username AWS \
   --password-stdin \
-  218014315198.dkr.ecr.ap-south-1.amazonaws.com
+  <aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com
 ```
 
 Create repositories:
@@ -203,38 +203,38 @@ aws ecr describe-repositories \
 
 ```bash
 docker tag streaming-auth:1.0.0 \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:v1
 
 docker tag streaming-stream:1.0.0 \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-stream:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-stream:v1
 
 docker tag streaming-admin:1.0.0 \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-admin:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-admin:v1
 
 docker tag streaming-chat:1.0.0 \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-chat:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-chat:v1
 
 docker tag streaming-frontend:1.0.0 \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-frontend:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-frontend:v1
 ```
 
 Push images:
 
 ```bash
 docker push \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:v1
 
 docker push \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-stream:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-stream:v1
 
 docker push \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-admin:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-admin:v1
 
 docker push \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-chat:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-chat:v1
 
 docker push \
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-frontend:v1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-frontend:v1
 ```
 
 ---
@@ -244,7 +244,7 @@ docker push \
 Jenkins:
 
 ```text
-https://jenkinsacademics.herovired.com/
+https://jenkinsurl.com/
 ```
 
 Pipeline job:
@@ -285,7 +285,7 @@ Jenkins AWS authentication:
 
 ```groovy
 withAWS(
-    credentials: 'StreamingApp-CI-CD_seemaKr',
+    credentials: 'CredentialsID',
     region: 'ap-south-1'
 ) {
     sh '''
@@ -304,7 +304,7 @@ withAWS(
 Check Jenkinsfile:
 
 ```bash
-cat Jenkinsfile
+cat **[Jenkinsfile]([Helm Installation and Ingress Guide](https://github.com/KrSeema/StreamingAppKubernetes_SeemaKr/blob/main/Jenkinsfile))**
 ```
 
 After modifying Jenkinsfile:
@@ -667,7 +667,7 @@ eksctl create iamserviceaccount \
   --cluster streaming-app-cluster \
   --namespace kube-system \
   --name aws-load-balancer-controller \
-  --attach-policy-arn arn:aws:iam::218014315198:policy/AWSLoadBalancerControllerIAMPolicy \
+  --attach-policy-arn arn:aws:iam::<aws_accountID>:policy/AWSLoadBalancerControllerIAMPolicy \
   --override-existing-serviceaccounts \
   --region ap-south-1 \
   --approve
@@ -1046,7 +1046,7 @@ kubectl get deployment auth \
 Expected:
 
 ```text
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:1.0.1
+<aws_accountID>.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:1.0.1
 ```
 
 ---
@@ -1100,7 +1100,7 @@ Create S3 bucket:
 
 ```bash
 aws s3 mb \
-  s3://streamingapp-media-218014315198 \
+  s3://streamingapp-media-<aws_accountID> \
   --region ap-south-1
 ```
 
@@ -1115,14 +1115,14 @@ Upload test object:
 ```bash
 aws s3 cp \
   <file> \
-  s3://streamingapp-media-218014315198/
+  s3://streamingapp-media-<aws_accountID>/
 ```
 
 List objects:
 
 ```bash
 aws s3 ls \
-  s3://streamingapp-media-218014315198/ \
+  s3://streamingapp-media-<aws_accountID>/ \
   --recursive
 ```
 
@@ -1162,7 +1162,7 @@ kubectl get serviceaccount \
 Expected annotation:
 
 ```yaml
-eks.amazonaws.com/role-arn: arn:aws:iam::218014315198:role/StreamingAppS3Role
+eks.amazonaws.com/role-arn: arn:aws:iam::<aws_accountID>:role/StreamingAppS3Role
 ```
 
 ---
@@ -1494,7 +1494,7 @@ List bucket:
 
 ```bash
 aws s3 ls \
-  s3://streamingapp-media-218014315198/ \
+  s3://streamingapp-media-<aws_accountID>/ \
   --recursive
 ```
 
@@ -1502,7 +1502,7 @@ Delete objects:
 
 ```bash
 aws s3 rm \
-  s3://streamingapp-media-218014315198/ \
+  s3://streamingapp-media-<aws_accountID>/ \
   --recursive
 ```
 
@@ -1510,14 +1510,14 @@ Delete bucket:
 
 ```bash
 aws s3 rb \
-  s3://streamingapp-media-218014315198
+  s3://streamingapp-media-<aws_accountID>
 ```
 
 Verify:
 
 ```bash
 aws s3api head-bucket \
-  --bucket streamingapp-media-218014315198
+  --bucket streamingapp-media-<aws_accountID>
 ```
 
 ---
@@ -1747,7 +1747,6 @@ The project demonstrated:
 * AWS resource cleanup
 
 
-# 27. Production Best Practices
+# 47. Production Best Practices
 
 For a production Kubernetes cluster, separate workloads into dedicated namespaces such as application, monitoring, and platform namespaces, with appropriate RBAC policies and resource quotas to improve isolation and security. I would enable TLS for external traffic using HTTPS with certificates managed through AWS Certificate Manager or cert-manager, and enforce secure communication between services where required. For scaling. Use HPA with carefully tuned CPU and memory targets and minimum/maximum replica counts based on actual workload patterns, and consider cluster autoscaling so worker nodes can scale with demand. Also use production-grade observability, network policies, secrets management, backups, and multi-AZ workloads to improve reliability and security.
-
