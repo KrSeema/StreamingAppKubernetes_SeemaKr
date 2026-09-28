@@ -306,6 +306,10 @@ aws_account_id.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:1.0.1
 
 The Helm chart references the ECR images through `values.yaml`.
 
+### ECR
+
+![ECR](Screenshots/ECR_Repositories.png)
+
 ---
 
 # 4. Jenkins CI/CD
@@ -351,6 +355,12 @@ The AWS region used by the pipeline is:
 ```text
 ap-south-1
 ```
+
+### Jenkins Build
+
+![Jenkins_Build](Screenshots/Jenkins_Build.png)
+
+![Jenkins_Build](Screenshots/Jenkins_Build2.png)
 
 ---
 
