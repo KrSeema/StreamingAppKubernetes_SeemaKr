@@ -216,7 +216,10 @@ StreamingApp/
 ├── docker-compose.yml
 ├── ingress.yaml
 ├── README.md
-└── README_HelmInstall_Ingress.md
+├── README_HelmInstall_Ingress.md
+└── Screenshots
+
+
 ```
 
 ---
@@ -290,13 +293,13 @@ streaming-stream
 ECR registry:
 
 ```text
-218014315198.dkr.ecr.ap-south-1.amazonaws.com
+aws_account_id.dkr.ecr.ap-south-1.amazonaws.com
 ```
 
 Example image:
 
 ```text
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:1.0.1
+aws_account_id.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:1.0.1
 ```
 
 The Helm chart references the ECR images through `values.yaml`.
@@ -757,7 +760,7 @@ kubectl rollout status deployment/auth \
 The running deployment used:
 
 ```text
-218014315198.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:1.0.1
+aws_account_id.dkr.ecr.ap-south-1.amazonaws.com/streaming-auth:1.0.1
 ```
 
 ---
@@ -833,6 +836,8 @@ Messages sent from one tab were received by the other tab.
 ### 6. Kubernetes self-healing
 
 A Streaming pod was deleted manually and Kubernetes created a replacement.
+
+![Jenkins Pipeline](screenshots/04-jenkins-success.png)
 
 ---
 
