@@ -34,6 +34,8 @@ The project demonstrates:
 * Slack-based ChatOps notifications
 * Kubernetes self-healing
 
+> 📖 **Detailed command reference:** [Documentation.md](Documentation.md)
+
 ---
 
 # Architecture
@@ -837,7 +839,6 @@ Messages sent from one tab were received by the other tab.
 
 A Streaming pod was deleted manually and Kubernetes created a replacement.
 
-![Jenkins Pipeline](screenshots/04-jenkins-success.png)
 
 ---
 
@@ -889,6 +890,33 @@ CloudWatch Alarms
 ```
 
 This provides visibility into cluster performance and application/container logs.
+
+---
+
+## Screenshots / Evidence
+
+![All Pods Running and Ready](Screenshots/AllRunning.png)
+
+![Jenkins_Build](Screenshots/Jenkins_Build.png)
+
+![Jenkins_Build](Screenshots/Jenkins_Build2.png)
+
+
+### 8. Ingress / ALB
+
+![Ingress](screenshots/ingress.png)
+
+### 9. Application
+
+![StreamingApp](screenshots/application.png)
+
+### 10. CloudWatch
+
+![CloudWatch monitoring](screenshots/cloudwatch.png)
+
+### 11. Slack ChatOps
+
+![Slack notification](screenshots/slack-chatops.png)
 
 ---
 
