@@ -316,6 +316,8 @@ The Helm chart references the ECR images through `values.yaml`.
 
 Jenkins is used to automate the Docker image build and ECR push process.
 
+[Jenkinsfile](https://github.com/KrSeema/StreamingAppKubernetes_SeemaKr/blob/main/Jenkinsfile)
+
 The pipeline performs:
 
 ```text
@@ -382,6 +384,9 @@ Failed pipeline:
 
 The Slack webhook is stored in Jenkins Credentials rather than being hard-coded into the repository.
 
+![Slack](Screenshots/ChatOpsIntegration-Slack.png)
+![Slack](Screenshots/Slack-Success-Failure-Message.png)
+
 ---
 
 # 6. Amazon EKS
@@ -400,6 +405,8 @@ streamingapp
 ```
 
 The cluster was configured with worker nodes across multiple Availability Zones.
+
+![EKS](Screenshots/EKS.png)
 
 ---
 
@@ -583,6 +590,9 @@ Amazon S3
 
 This prevents large media files from being stored directly inside MongoDB.
 
+![Scale](Screenshots/S3-Pre-Post-Upload.png)
+
+
 ---
 
 # 12. IAM Roles for Service Accounts
@@ -718,6 +728,8 @@ kubectl scale deployment/streaming \
 
 HPA configuration was then restored to the Helm-defined baseline.
 
+![S3](Screenshots/ScaleOut.png)
+
 ---
 
 # 16. Zero-Downtime Rolling Updates
@@ -743,6 +755,12 @@ chat        RollingUpdate   0   1
 frontend    RollingUpdate   0   1
 streaming   RollingUpdate   0   1
 ```
+
+![RollingUpdate](Screenshots/ZeroDowntimeRollingUpdate.png)
+
+![RollingUpdate](Screenshots/ZeroDowntimeRollingUpdate2.png)
+
+![RollingUpdate](Screenshots/ZeroDowntimeRollingUpdate3.png)
 
 ---
 
@@ -792,6 +810,8 @@ Kubernetes automatically created a replacement pod.
 
 This demonstrated the Deployment controller's ability to maintain the desired replica count.
 
+![SelfHealing](Screenshots/Survives-Pod-Restart.png)
+
 ---
 
 # 19. Application Smoke Tests
@@ -806,6 +826,9 @@ Verified that application pods were:
 Running
 Ready
 ```
+
+![PodsHealth](Screenshots/AllRunning.png)
+
 
 ### 2. Authentication
 
@@ -822,9 +845,16 @@ curl -i -X POST \
 
 Authentication returned a successful response with JWT authentication information.
 
+![Register&LogIn](Screenshots/Register&Login.png)
+
+![Register&LogIn](Screenshots/Register&Login2.png)
+
+
 ### 3. Video upload
 
 A small test video and thumbnail were uploaded through the Admin dashboard.
+
+![VideoUpload](Screenshots/UploadViaAdmin.png)
 
 ### 4. Playback
 
@@ -839,16 +869,23 @@ curl -i \
   -o /tmp/video-test
 ```
 
+![Playback](Screenshots/Playback-from-browse.png)
+
+
 ### 5. Live chat
 
 Live chat was tested using two browser tabs.
 
 Messages sent from one tab were received by the other tab.
 
+![LiveChat](Screenshots/LiveChatBroadcast.png)
+
+
 ### 6. Kubernetes self-healing
 
 A Streaming pod was deleted manually and Kubernetes created a replacement.
 
+![SelfHealing](Screenshots/Survives-Pod-Restart.png)
 
 ---
 
@@ -880,6 +917,8 @@ Example log groups:
 
 EC2 CPU alarms were also configured with a 70% threshold.
 
+![CloudWatch](Screenshots/CloudWatch.png)
+
 ---
 
 # 21. Monitoring Architecture
@@ -900,33 +939,6 @@ CloudWatch Alarms
 ```
 
 This provides visibility into cluster performance and application/container logs.
-
----
-
-## Screenshots / Evidence
-
-![All Pods Running and Ready](Screenshots/AllRunning.png)
-
-![Jenkins_Build](Screenshots/Jenkins_Build.png)
-
-![Jenkins_Build](Screenshots/Jenkins_Build2.png)
-
-
-### 8. Ingress / ALB
-
-![Ingress](screenshots/ingress.png)
-
-### 9. Application
-
-![StreamingApp](screenshots/application.png)
-
-### 10. CloudWatch
-
-![CloudWatch monitoring](screenshots/cloudwatch.png)
-
-### 11. Slack ChatOps
-
-![Slack notification](screenshots/slack-chatops.png)
 
 ---
 
